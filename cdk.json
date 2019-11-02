@@ -1,0 +1,5 @@
+{
+  "app": "node bin/one-click-drone.js",
+  "verbose": true,
+  "strict": true
+}

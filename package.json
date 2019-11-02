@@ -1,0 +1,71 @@
+{
+  "name": "one-click-drone",
+  "version": "1.0.0",
+  "description": "one click deploy of Drone CI into your AWS account with Fargate, RDS, and CloudWatch",
+  "bin": {
+    "one-click-drone": "bin/one-click-drone.js"
+  },
+  "scripts": {
+    "diff": "cdk diff",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/3p3r/one-click-drone.git"
+  },
+  "author": "Sepehr Laal <one@hurricanesep.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/3p3r/one-click-drone/issues"
+  },
+  "homepage": "https://github.com/3p3r/one-click-drone#readme",
+  "devDependencies": {
+    "aws-cdk": "^1.15.0",
+    "eslint": "^6.6.0",
+    "eslint-config-prettier": "^6.5.0",
+    "eslint-plugin-prettier": "^3.1.1",
+    "prettier": "^1.18.2"
+  },
+  "dependencies": {
+    "@aws-cdk/core": "^1.15.0"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "tabWidth": 2,
+    "singleQuote": true,
+    "jsxBracketSameLine": true,
+    "trailingComma": "es5"
+  },
+  "eslintConfig": {
+    "env": {
+      "es6": true,
+      "node": true,
+      "mocha": true
+    },
+    "extends": [
+      "plugin:prettier/recommended",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "ecmaFeatures": {
+        "legacyDecorators": true
+      }
+    },
+    "rules": {
+      "semi": "error",
+      "strict": [
+        "error",
+        "global"
+      ],
+      "max-len": [
+        "error",
+        {
+          "code": 120,
+          "ignoreUrls": true
+        }
+      ]
+    }
+  }
+}

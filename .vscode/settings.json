@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "string": "cpp"
+  },
+  "eslint.autoFixOnSave": true,
+  "eslint.enable": true,
+  "editor.formatOnSave": false,
+  "editor.tabSize": 2,
+  "editor.rulers": [120]
+}
