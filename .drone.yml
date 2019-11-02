@@ -1,0 +1,10 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: test
+  image: node:alpine
+  commands:
+  - node --version
