@@ -7,4 +7,5 @@ steps:
 - name: test
   image: node:alpine
   commands:
-  - node --version
+  - npm install
+  - npm run synth
