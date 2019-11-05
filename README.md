@@ -26,6 +26,7 @@ npm run deploy
 - [x] ~~Add CloudFront and enable HTTPS access to the server instance~~
 - [ ] Investigate compatibility with serverless Aurora
 - [ ] Add a MySQL database to the server fleet in Fargate
+- [ ] Investigate and R&D into how we can add a permanent S3 backed volume to runners
 - [ ] Document how different parameters are configured
 - [ ] Write CDK unit tests for all the resources deployed
 - [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
