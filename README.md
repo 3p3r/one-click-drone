@@ -24,11 +24,11 @@ npm run deploy
 - [x] ~~A basic publicly accessible Drone setup (MVP)~~
 - [x] ~~Figure out API Gateway issues with Drone's homepage~~
 - [x] ~~Add CloudFront and enable HTTPS access to the server instance~~
-- [ ] Investigate compatibility with serverless Aurora
-- [ ] Add a MySQL database to the server fleet in Fargate
+- [x] ~~Investigate compatibility with serverless Aurora~~
+- [x] ~~Add a PostgreSQL database to the server fleet in Fargate~~
 - [ ] Investigate and R&D into how we can add a permanent S3 backed volume to runners
 - [ ] Document how different parameters are configured
 - [ ] Write CDK unit tests for all the resources deployed
 - [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
-- [ ] Put Github OAuth client ID and secret in SSM and read it from SSM for security
-- [ ] Automate custom domain creation in the wrapper API Gateway
+- [ ] Put Github OAuth and other sensitive parameters in SSM and read it from SSM for security
+- [ ] Automate custom domain creation in the wrapper API Gateway / CloudFront
