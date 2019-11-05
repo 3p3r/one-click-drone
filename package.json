@@ -34,6 +34,7 @@
     "@aws-cdk/aws-ec2": "^1.15.0",
     "@aws-cdk/aws-ecs": "^1.15.0",
     "@aws-cdk/aws-ecs-patterns": "^1.15.0",
+    "@aws-cdk/aws-rds": "^1.15.0",
     "@aws-cdk/core": "^1.15.0",
     "@rootstream/rc-typed": "^1.0.0",
     "debug": "^4.1.1",
