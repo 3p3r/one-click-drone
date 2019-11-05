@@ -1,6 +1,6 @@
 # one-click-drone
 
-one click deploy of [Drone CI](https://drone.io/) into your AWS account with Fargate, API Gateway, RDS, and CloudWatch.
+one click deploy of [Drone CI](https://drone.io/) into your AWS account with Fargate, CloudFront, RDS, and CloudWatch.
 
 this project was made out of my personal frustration with people's crappy Drone CI setups, half-assed entirely useless
 Medium articles and broken CloudFormation scripts all around the Internet. It seems like nobody wants to put down the
@@ -15,18 +15,19 @@ this project uses AWS CDK. make sure your environment is set up
 npm install
 # skip this step if you have already bootstrapped CDK for your account
 npx cdk bootstrap
-# to deploy tp your AWS account
+# to deploy to your AWS account
 npm run deploy
 ```
 
 ## roadmap
 
-- [x] A basic publicly accessible Drone setup (MVP)
-- [ ] Figure out API Gateway issues with Drone's homepage
-- [ ] Document how different parameters are configured
-- [ ] Write CDK unit tests for all the resources deployed
+- [x] ~~A basic publicly accessible Drone setup (MVP)~~
+- [x] ~~Figure out API Gateway issues with Drone's homepage~~
+- [x] ~~Add CloudFront and enable HTTPS access to the server instance~~
 - [ ] Investigate compatibility with serverless Aurora
 - [ ] Add a MySQL database to the server fleet in Fargate
+- [ ] Document how different parameters are configured
+- [ ] Write CDK unit tests for all the resources deployed
 - [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
 - [ ] Put Github OAuth client ID and secret in SSM and read it from SSM for security
 - [ ] Automate custom domain creation in the wrapper API Gateway
