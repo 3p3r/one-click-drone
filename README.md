@@ -26,9 +26,11 @@ npm run deploy
 - [x] ~~Add CloudFront and enable HTTPS access to the server instance~~
 - [x] ~~Investigate compatibility with serverless Aurora~~
 - [x] ~~Add a PostgreSQL database to the server fleet in Fargate~~
-- [ ] Investigate and R&D into how we can add a permanent S3 backed volume to runners
+- [x] ~~Investigate and R&D into how we can add a permanent shared volume to runners~~
+- [x] ~~Rework the CDK script to have all the names following cfn conventions (CamelCased)~~
+- [ ] Use Drone's capability to upload logs into a private S3 bucket instead of the database
+- [ ] Add an ECS task that cleans up the EFS cache once in a while to reduce costs
 - [ ] Use Drone's internal health check (/healthz) in task definitions
-- [ ] Rework the CDK script to have all the names following cfn conventions (CamelCased)
 - [ ] Document how different parameters are configured
 - [ ] Write CDK unit tests for all the resources deployed
 - [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
