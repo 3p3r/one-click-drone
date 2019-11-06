@@ -4,8 +4,20 @@ type: docker
 name: default
 
 steps:
-- name: test
-  image: node:alpine
-  commands:
-  - npm install
-  - npm run synth
+  - name: test
+    image: node:alpine
+    volumes:
+      - name: cache
+        path: /cache
+    commands:
+      - ls -la /cache
+      - echo works > /cache/index
+      - echo $(date +%s) > /cache/index
+      - cat /cache/index
+      - npm install
+      - npm run synth
+
+volumes:
+  - name: cache
+    host:
+      path: /mnt/efs
