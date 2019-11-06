@@ -27,6 +27,8 @@ npm run deploy
 - [x] ~~Investigate compatibility with serverless Aurora~~
 - [x] ~~Add a PostgreSQL database to the server fleet in Fargate~~
 - [ ] Investigate and R&D into how we can add a permanent S3 backed volume to runners
+- [ ] Use Drone's internal health check (/healthz) in task definitions
+- [ ] Rework the CDK script to have all the names following cfn conventions (CamelCased)
 - [ ] Document how different parameters are configured
 - [ ] Write CDK unit tests for all the resources deployed
 - [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
