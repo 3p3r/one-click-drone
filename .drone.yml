@@ -46,7 +46,7 @@ steps:
         from_secret: github_deploy_pass
     commands:
       - git add dist/ocd.yml
-      - git commit -m "[skip ci] [dist push] updated raw CloudFormation file"
+      - git diff --staged --quiet || git commit -m "[skip ci] [dist push] updated raw CloudFormation file"
       - git remote add deploy "https://$GIT_USER:$GIT_PASS@github.com/$DRONE_REPO_OWNER/$DRONE_REPO_NAME.git"
       - git push deploy master
     when:
