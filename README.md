@@ -1,5 +1,8 @@
 # one-click-drone
 
+**Launch in your AWS account:**
+<a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?templateURL=https%3A%2F%2Fraw.githubusercontent.com%2F3p3r%2Fone-click-drone%2Fmaster%2Fdist%2Focd.yml"><span><img height="24px" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"/></span></a>
+
 one click deploy of [Drone CI](https://drone.io/) into your AWS account with Fargate, CloudFront, RDS, and CloudWatch.
 
 this project was made out of my personal frustration with people's crappy Drone CI setups, half-assed entirely useless
