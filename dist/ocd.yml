@@ -1,0 +1,1567 @@
+Description: "one click deploy of Drone CI into your AWS account with Fargate, RDS, and CloudWatch see: https://github.com/3p3r/one-click-drone#readme"
+Parameters:
+  RunnerInstanceType:
+    Type: String
+    Default: t2.micro
+    Description: EC2 instance type of Drone docker runners
+  DatabaseUsername:
+    Type: String
+    Default: ""
+    Description: Database username used by Drone server agents
+  DatabasePassword:
+    Type: String
+    Default: ""
+    Description: Database password used by Drone server agents
+    NoEcho: true
+  DatabaseSecret:
+    Type: String
+    Default: change-this-secret
+    Description: Database secret used by Drone server agents to encrypt Drone secrets
+    NoEcho: true
+  RunnerContainer:
+    Type: String
+    Default: drone/drone-runner-docker:latest
+    Description: Drone docker runner container name and version used
+  RunnerMaxCapacity:
+    Type: Number
+    Default: 5
+    Description: Drone docker runner service auto-scaler limit
+    MinValue: 2
+  RunnerJobCapacity:
+    Type: Number
+    Default: 2
+    Description: Max number of build jobs a single runner container accepts
+    MinValue: 2
+  ServerContainer:
+    Type: String
+    Default: drone/drone:latest
+    Description: Drone server container name and version used
+  ServerRpcSecret:
+    Type: String
+    Default: change-this-secret
+    Description: Drone shared RPC secret used across all runners and servers (DRONE_RPC_SECRET)
+    NoEcho: true
+  ServerRepoFilter:
+    Type: String
+    Default: ""
+    Description: Drone repository filter (DRONE_REPOSITORY_FILTER)
+  ServerMaxCapacity:
+    Type: Number
+    Default: 2
+    Description: Drone server service auto-scaler limit
+    MinValue: 2
+  ServerCookieSecret:
+    Type: String
+    Default: change-this-secret
+    Description: Drone server secret key used to sign authentication cookies
+    NoEcho: true
+  ServerAdmin:
+    Type: String
+    Default: ""
+    Description: Drone server admin user (created only during the initial deploy)
+  GithubServer:
+    Type: String
+    Default: https://github.com
+    Description: Github server used. Change this if using Github enterprise
+  GithubClientId:
+    Type: String
+    Default: ""
+    Description: Github app OAuth clientId
+    NoEcho: true
+  GithubClientSecret:
+    Type: String
+    Default: ""
+    Description: Github app OAuth clientSecret
+    NoEcho: true
+  CacheCleanerRate:
+    Type: String
+    Default: 1 day
+    Description: The rate at which the cache cleaner runs (CloudWatch rate expression)
+  CacheExpireAfter:
+    Type: Number
+    Default: 1
+    Description: Cache files older than this number of days are deleted at "CacheCleanerRate" intervals
+    MinValue: 1
+  SsmParameterValueawsserviceecsoptimizedamiamazonlinux2recommendedimageidC96584B6F00A464EAD1953AFF4B05118Parameter:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+Resources:
+  VPCB9E5F0B4:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC
+  VPCPublicSubnet1SubnetB4246D30:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/18
+      VpcId:
+        Ref: VPCB9E5F0B4
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet1
+        - Key: aws-cdk:subnet-name
+          Value: Public
+        - Key: aws-cdk:subnet-type
+          Value: Public
+  VPCPublicSubnet1RouteTableFEE4B781:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCB9E5F0B4
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet1
+  VPCPublicSubnet1RouteTableAssociation0B0896DC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCPublicSubnet1RouteTableFEE4B781
+      SubnetId:
+        Ref: VPCPublicSubnet1SubnetB4246D30
+  VPCPublicSubnet1DefaultRoute91CEF279:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: VPCPublicSubnet1RouteTableFEE4B781
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: VPCIGWB7E252D3
+    DependsOn:
+      - VPCVPCGW99B986DC
+  VPCPublicSubnet1EIP6AD938E8:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VPCPublicSubnet1NATGatewayE0556630:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - VPCPublicSubnet1EIP6AD938E8
+          - AllocationId
+      SubnetId:
+        Ref: VPCPublicSubnet1SubnetB4246D30
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet1
+  VPCPublicSubnet2Subnet74179F39:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.64.0/18
+      VpcId:
+        Ref: VPCB9E5F0B4
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet2
+        - Key: aws-cdk:subnet-name
+          Value: Public
+        - Key: aws-cdk:subnet-type
+          Value: Public
+  VPCPublicSubnet2RouteTable6F1A15F1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCB9E5F0B4
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet2
+  VPCPublicSubnet2RouteTableAssociation5A808732:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCPublicSubnet2RouteTable6F1A15F1
+      SubnetId:
+        Ref: VPCPublicSubnet2Subnet74179F39
+  VPCPublicSubnet2DefaultRouteB7481BBA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: VPCPublicSubnet2RouteTable6F1A15F1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: VPCIGWB7E252D3
+    DependsOn:
+      - VPCVPCGW99B986DC
+  VPCPublicSubnet2EIP4947BC00:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VPCPublicSubnet2NATGateway3C070193:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - VPCPublicSubnet2EIP4947BC00
+          - AllocationId
+      SubnetId:
+        Ref: VPCPublicSubnet2Subnet74179F39
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PublicSubnet2
+  VPCPrivateSubnet1Subnet8BCA10E0:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.128.0/18
+      VpcId:
+        Ref: VPCB9E5F0B4
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PrivateSubnet1
+        - Key: aws-cdk:subnet-name
+          Value: Private
+        - Key: aws-cdk:subnet-type
+          Value: Private
+  VPCPrivateSubnet1RouteTableBE8A6027:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCB9E5F0B4
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PrivateSubnet1
+  VPCPrivateSubnet1RouteTableAssociation347902D1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCPrivateSubnet1RouteTableBE8A6027
+      SubnetId:
+        Ref: VPCPrivateSubnet1Subnet8BCA10E0
+  VPCPrivateSubnet1DefaultRouteAE1D6490:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: VPCPrivateSubnet1RouteTableBE8A6027
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: VPCPublicSubnet1NATGatewayE0556630
+  VPCPrivateSubnet2SubnetCFCDAA7A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.192.0/18
+      VpcId:
+        Ref: VPCB9E5F0B4
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PrivateSubnet2
+        - Key: aws-cdk:subnet-name
+          Value: Private
+        - Key: aws-cdk:subnet-type
+          Value: Private
+  VPCPrivateSubnet2RouteTable0A19E10E:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCB9E5F0B4
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC/PrivateSubnet2
+  VPCPrivateSubnet2RouteTableAssociation0C73D413:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCPrivateSubnet2RouteTable0A19E10E
+      SubnetId:
+        Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+  VPCPrivateSubnet2DefaultRouteF4F5CFD2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: VPCPrivateSubnet2RouteTable0A19E10E
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: VPCPublicSubnet2NATGateway3C070193
+  VPCIGWB7E252D3:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/VPC
+  VPCVPCGW99B986DC:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPCB9E5F0B4
+      InternetGatewayId:
+        Ref: VPCIGWB7E252D3
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Drone CI database cluster subnet group
+      SubnetIds:
+        - Ref: VPCPrivateSubnet1Subnet8BCA10E0
+        - Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+  DBSecurityGroupE3B245A3:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: one-click-drone-stack/DBSecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: from 0.0.0.0/0:5432
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+        - CidrIpv6: ::0/0
+          Description: from ::0/0:5432
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+      VpcId:
+        Ref: VPCB9E5F0B4
+  DBCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      BackupRetentionPeriod: 1
+      DatabaseName: drone
+      DBClusterIdentifier: one-click-drone-db
+      DBSubnetGroupName:
+        Ref: DBSubnetGroup
+      DeletionProtection: false
+      EngineMode: serverless
+      EngineVersion: "10.7"
+      MasterUsername:
+        Ref: DatabaseUsername
+      MasterUserPassword:
+        Ref: DatabasePassword
+      Port: 5432
+      ScalingConfiguration:
+        AutoPause: true
+        SecondsUntilAutoPause: 1800
+      StorageEncrypted: true
+      VpcSecurityGroupIds:
+        - Fn::GetAtt:
+            - DBSecurityGroupE3B245A3
+            - GroupId
+  cluster611F8AFF:
+    Type: AWS::ECS::Cluster
+  clusterDefaultAutoScalingGroupInstanceSecurityGroup02B5B205:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: one-click-drone-stack/cluster/DefaultAutoScalingGroup/InstanceSecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+      VpcId:
+        Ref: VPCB9E5F0B4
+  clusterDefaultAutoScalingGroupInstanceSecurityGroupfromoneclickdronestackRunnerAgentsLBSecurityGroup350CE8973276865535229A68C8:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      FromPort: 32768
+      GroupId:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupInstanceSecurityGroup02B5B205
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - RunnerAgentsLBSecurityGroup40A1BD2E
+          - GroupId
+      ToPort: 65535
+  clusterDefaultAutoScalingGroupInstanceRole98EFF504:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                Fn::Join:
+                  - ""
+                  - - ec2.
+                    - Ref: AWS::URLSuffix
+        Version: "2012-10-17"
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+  clusterDefaultAutoScalingGroupInstanceRoleDefaultPolicyFBC91645:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ecs:CreateCluster
+              - ecs:DeregisterContainerInstance
+              - ecs:DiscoverPollEndpoint
+              - ecs:Poll
+              - ecs:RegisterContainerInstance
+              - ecs:StartTelemetrySession
+              - ecs:Submit*
+              - ecr:GetAuthorizationToken
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: clusterDefaultAutoScalingGroupInstanceRoleDefaultPolicyFBC91645
+      Roles:
+        - Ref: clusterDefaultAutoScalingGroupInstanceRole98EFF504
+  clusterDefaultAutoScalingGroupInstanceProfileC240B524:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: clusterDefaultAutoScalingGroupInstanceRole98EFF504
+  clusterDefaultAutoScalingGroupLaunchConfigEC006908:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId:
+        Ref: SsmParameterValueawsserviceecsoptimizedamiamazonlinux2recommendedimageidC96584B6F00A464EAD1953AFF4B05118Parameter
+      InstanceType:
+        Ref: RunnerInstanceType
+      IamInstanceProfile:
+        Ref: clusterDefaultAutoScalingGroupInstanceProfileC240B524
+      SecurityGroups:
+        - Fn::GetAtt:
+            - clusterDefaultAutoScalingGroupInstanceSecurityGroup02B5B205
+            - GroupId
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+            - ""
+            - - >-
+                #!/bin/bash
+
+                echo ECS_CLUSTER=
+              - Ref: cluster611F8AFF
+              - >-2
+                 >> /etc/ecs/ecs.config
+                sudo iptables --insert FORWARD 1 --in-interface docker+ --destination 169.254.169.254/32 --jump DROP
+
+                sudo service iptables save
+
+                echo ECS_AWSVPC_BLOCK_IMDS=true >> /etc/ecs/ecs.config
+
+                yum update -y,yum install -y amazon-efs-utils,mkdir -p /mnt/efs,
+              - Fn::Sub:
+                  - mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${efsId}.efs.${region}.amazonaws.com:/ /mnt/efs
+                  - region:
+                      Ref: AWS::Region
+                    efsId:
+                      Ref: EFSCacheVolume
+              - ",chmod 777 /mnt/efs,mount -a"
+    DependsOn:
+      - clusterDefaultAutoScalingGroupInstanceRoleDefaultPolicyFBC91645
+      - clusterDefaultAutoScalingGroupInstanceRole98EFF504
+  clusterDefaultAutoScalingGroupASG03807708:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MaxSize: "1"
+      MinSize: "1"
+      DesiredCapacity: "1"
+      LaunchConfigurationName:
+        Ref: clusterDefaultAutoScalingGroupLaunchConfigEC006908
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+      VPCZoneIdentifier:
+        - Ref: VPCPrivateSubnet1Subnet8BCA10E0
+        - Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: true
+  clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleC8398058:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+  clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleDefaultPolicyC2015014:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ec2:DescribeInstances
+              - ec2:DescribeInstanceAttribute
+              - ec2:DescribeInstanceStatus
+              - ec2:DescribeHosts
+            Effect: Allow
+            Resource: "*"
+          - Action: autoscaling:CompleteLifecycleAction
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:"
+                  - Ref: AWS::Partition
+                  - ":autoscaling:"
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - :autoScalingGroup:*:autoScalingGroupName/
+                  - Ref: clusterDefaultAutoScalingGroupASG03807708
+          - Action:
+              - ecs:DescribeContainerInstances
+              - ecs:DescribeTasks
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - ecs:ListContainerInstances
+              - ecs:SubmitContainerStateChange
+              - ecs:SubmitTaskStateChange
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - cluster611F8AFF
+                - Arn
+          - Action:
+              - ecs:UpdateContainerInstancesState
+              - ecs:ListTasks
+            Condition:
+              ArnEquals:
+                ecs:cluster:
+                  Fn::GetAtt:
+                    - cluster611F8AFF
+                    - Arn
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleDefaultPolicyC2015014
+      Roles:
+        - Ref: clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleC8398058
+  clusterDefaultAutoScalingGroupDrainECSHookFunctionB217787A:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: >
+          import boto3, json, os, time
+
+
+          ecs = boto3.client('ecs')
+
+          autoscaling = boto3.client('autoscaling')
+
+
+
+          def lambda_handler(event, context):
+            print(json.dumps(event))
+            cluster = os.environ['CLUSTER']
+            snsTopicArn = event['Records'][0]['Sns']['TopicArn']
+            lifecycle_event = json.loads(event['Records'][0]['Sns']['Message'])
+            instance_id = lifecycle_event.get('EC2InstanceId')
+            if not instance_id:
+              print('Got event without EC2InstanceId: %s', json.dumps(event))
+              return
+
+            instance_arn = container_instance_arn(cluster, instance_id)
+            print('Instance %s has container instance ARN %s' % (lifecycle_event['EC2InstanceId'], instance_arn))
+
+            if not instance_arn:
+              return
+
+            while has_tasks(cluster, instance_arn):
+              time.sleep(10)
+
+            try:
+              print('Terminating instance %s' % instance_id)
+              autoscaling.complete_lifecycle_action(
+                  LifecycleActionResult='CONTINUE',
+                  **pick(lifecycle_event, 'LifecycleHookName', 'LifecycleActionToken', 'AutoScalingGroupName'))
+            except Exception as e:
+              # Lifecycle action may have already completed.
+              print(str(e))
+
+
+          def container_instance_arn(cluster, instance_id):
+            """Turn an instance ID into a container instance ARN."""
+            arns = ecs.list_container_instances(cluster=cluster, filter='ec2InstanceId==' + instance_id)['containerInstanceArns']
+            if not arns:
+              return None
+            return arns[0]
+
+
+          def has_tasks(cluster, instance_arn):
+            """Return True if the instance is running tasks for the given cluster."""
+            instances = ecs.describe_container_instances(cluster=cluster, containerInstances=[instance_arn])['containerInstances']
+            if not instances:
+              return False
+            instance = instances[0]
+
+            if instance['status'] == 'ACTIVE':
+              # Start draining, then try again later
+              set_container_instance_to_draining(cluster, instance_arn)
+              return True
+
+            tasks = instance['runningTasksCount'] + instance['pendingTasksCount']
+            print('Instance %s has %s tasks' % (instance_arn, tasks))
+
+            return tasks > 0
+
+
+          def set_container_instance_to_draining(cluster, instance_arn):
+            ecs.update_container_instances_state(
+                cluster=cluster,
+                containerInstances=[instance_arn], status='DRAINING')
+
+
+          def pick(dct, *keys):
+            """Pick a subset of a dict."""
+            return {k: v for k, v in dct.items() if k in keys}
+      Handler: index.lambda_handler
+      Role:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleC8398058
+          - Arn
+      Runtime: python3.6
+      Environment:
+        Variables:
+          CLUSTER:
+            Ref: cluster611F8AFF
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+      Timeout: 310
+    DependsOn:
+      - clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleDefaultPolicyC2015014
+      - clusterDefaultAutoScalingGroupDrainECSHookFunctionServiceRoleC8398058
+  clusterDefaultAutoScalingGroupDrainECSHookFunctionAllowInvokeoneclickdronestackclusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicCC571A2831DF905A:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupDrainECSHookFunctionB217787A
+          - Arn
+      Principal: sns.amazonaws.com
+      SourceArn:
+        Ref: clusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicC8A9EF85
+  clusterDefaultAutoScalingGroupDrainECSHookFunctionTopicAD2A6F0C:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: lambda
+      TopicArn:
+        Ref: clusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicC8A9EF85
+      Endpoint:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupDrainECSHookFunctionB217787A
+          - Arn
+  clusterDefaultAutoScalingGroupLifecycleHookDrainHookRole3AE4A0D5:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: autoscaling.amazonaws.com
+        Version: "2012-10-17"
+      Tags:
+        - Key: Name
+          Value: one-click-drone-stack/cluster/DefaultAutoScalingGroup
+  clusterDefaultAutoScalingGroupLifecycleHookDrainHookRoleDefaultPolicyB8C7E1BD:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource:
+              Ref: clusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicC8A9EF85
+        Version: "2012-10-17"
+      PolicyName: clusterDefaultAutoScalingGroupLifecycleHookDrainHookRoleDefaultPolicyB8C7E1BD
+      Roles:
+        - Ref: clusterDefaultAutoScalingGroupLifecycleHookDrainHookRole3AE4A0D5
+  clusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicC8A9EF85:
+    Type: AWS::SNS::Topic
+  clusterDefaultAutoScalingGroupLifecycleHookDrainHook304C825C:
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties:
+      AutoScalingGroupName:
+        Ref: clusterDefaultAutoScalingGroupASG03807708
+      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+      DefaultResult: CONTINUE
+      HeartbeatTimeout: 300
+      NotificationTargetARN:
+        Ref: clusterDefaultAutoScalingGroupLifecycleHookDrainHookTopicC8A9EF85
+      RoleARN:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupLifecycleHookDrainHookRole3AE4A0D5
+          - Arn
+    DependsOn:
+      - clusterDefaultAutoScalingGroupLifecycleHookDrainHookRoleDefaultPolicyB8C7E1BD
+      - clusterDefaultAutoScalingGroupLifecycleHookDrainHookRole3AE4A0D5
+  LogsBucketUser63A64EA3:
+    Type: AWS::IAM::User
+  LogsBucket9C4D8843:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  LogsBucketPolicyD70D9252:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: LogsBucket9C4D8843
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - LogsBucketUser63A64EA3
+                  - Arn
+            Resource:
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - LogsBucket9C4D8843
+                        - Arn
+                    - /*
+              - Fn::GetAtt:
+                  - LogsBucket9C4D8843
+                  - Arn
+        Version: "2012-10-17"
+  LogsBucketCredentials:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        Ref: LogsBucketUser63A64EA3
+  ServerAgentsLB2FE852AF:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups:
+        - Fn::GetAtt:
+            - ServerAgentsLBSecurityGroup8765CD38
+            - GroupId
+      Subnets:
+        - Ref: VPCPublicSubnet1SubnetB4246D30
+        - Ref: VPCPublicSubnet2Subnet74179F39
+      Type: application
+    DependsOn:
+      - VPCPublicSubnet1DefaultRoute91CEF279
+      - VPCPublicSubnet2DefaultRouteB7481BBA
+  ServerAgentsLBSecurityGroup8765CD38:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Automatically created Security Group for ELB oneclickdronestackServerAgentsLB262CD9B7
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId:
+        Ref: VPCB9E5F0B4
+  ServerAgentsLBSecurityGrouptooneclickdronestackServerAgentsServiceSecurityGroup747B78838059BC034A:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - ServerAgentsLBSecurityGroup8765CD38
+          - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - ServerAgentsServiceSecurityGroupA28A9253
+          - GroupId
+      FromPort: 80
+      ToPort: 80
+  ServerAgentsLBPublicListener815883F0:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn:
+            Ref: ServerAgentsLBPublicListenerECSGroup200502D1
+          Type: forward
+      LoadBalancerArn:
+        Ref: ServerAgentsLB2FE852AF
+      Port: 80
+      Protocol: HTTP
+  ServerAgentsLBPublicListenerECSGroup200502D1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Ref: VPCB9E5F0B4
+  ServerAgentsTaskDefTaskRoleB6AE83AB:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  ServerAgentsTaskDef79814931:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Environment:
+            - Name: AWS_ACCESS_KEY_ID
+              Value:
+                Ref: LogsBucketCredentials
+            - Name: AWS_SECRET_ACCESS_KEY
+              Value:
+                Fn::GetAtt:
+                  - LogsBucketCredentials
+                  - SecretAccessKey
+            - Name: AWS_DEFAULT_REGION
+              Value:
+                Ref: AWS::Region
+            - Name: AWS_REGION
+              Value:
+                Ref: AWS::Region
+            - Name: DRONE_S3_BUCKET
+              Value:
+                Ref: LogsBucket9C4D8843
+            - Name: DRONE_LOGS_DEBUG
+              Value: "true"
+            - Name: DRONE_LOGS_COLOR
+              Value: "false"
+            - Name: DRONE_AGENTS_ENABLED
+              Value: "true"
+            - Name: DRONE_REPOSITORY_FILTER
+              Value:
+                Ref: ServerRepoFilter
+            - Name: DRONE_GITHUB_SERVER
+              Value:
+                Ref: GithubServer
+            - Name: DRONE_GITHUB_CLIENT_ID
+              Value:
+                Ref: GithubClientId
+            - Name: DRONE_GITHUB_CLIENT_SECRET
+              Value:
+                Ref: GithubClientSecret
+            - Name: DRONE_RPC_SECRET
+              Value:
+                Ref: ServerRpcSecret
+            - Name: DRONE_DATABASE_DRIVER
+              Value: postgres
+            - Name: DRONE_DATABASE_SECRET
+              Value:
+                Ref: DatabaseSecret
+            - Name: DRONE_DATABASE_DATASOURCE
+              Value:
+                Fn::Sub:
+                  - postgres://${user}:${pass}@${host}:${port}/drone?sslmode=disable
+                  - user:
+                      Ref: DatabaseUsername
+                    pass:
+                      Ref: DatabasePassword
+                    host:
+                      Fn::GetAtt:
+                        - DBCluster
+                        - Endpoint.Address
+                    port:
+                      Fn::GetAtt:
+                        - DBCluster
+                        - Endpoint.Port
+            - Name: DRONE_COOKIE_SECRET
+              Value:
+                Ref: ServerCookieSecret
+            - Name: DRONE_USER_CREATE
+              Value:
+                Fn::Sub:
+                  - username:${admin},admin:true
+                  - admin:
+                      Ref: ServerAdmin
+            - Name: DRONE_SERVER_HOST
+              Value:
+                Fn::GetAtt:
+                  - CloudfrontWrapperCFDistribution8FE23D18
+                  - DomainName
+            - Name: DRONE_SERVER_PROTO
+              Value: https
+          Essential: true
+          Image:
+            Ref: ServerContainer
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: ServerAgentsTaskDefwebLogGroup9A4039B9
+              awslogs-stream-prefix: ServerAgents
+              awslogs-region:
+                Ref: AWS::Region
+          Name: web
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+      Cpu: "256"
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - ServerAgentsTaskDefExecutionRole2D9F7CF3
+          - Arn
+      Family: oneclickdronestackServerAgentsTaskDef357A36E4
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn:
+        Fn::GetAtt:
+          - ServerAgentsTaskDefTaskRoleB6AE83AB
+          - Arn
+  ServerAgentsTaskDefwebLogGroup9A4039B9:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  ServerAgentsTaskDefExecutionRole2D9F7CF3:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  ServerAgentsTaskDefExecutionRoleDefaultPolicy3FCCF9A2:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - ServerAgentsTaskDefwebLogGroup9A4039B9
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: ServerAgentsTaskDefExecutionRoleDefaultPolicy3FCCF9A2
+      Roles:
+        - Ref: ServerAgentsTaskDefExecutionRole2D9F7CF3
+  ServerAgentsServiceCF2FAFBF:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition:
+        Ref: ServerAgentsTaskDef79814931
+      Cluster:
+        Ref: cluster611F8AFF
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 1
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: 80
+          TargetGroupArn:
+            Ref: ServerAgentsLBPublicListenerECSGroup200502D1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::GetAtt:
+                - ServerAgentsServiceSecurityGroupA28A9253
+                - GroupId
+          Subnets:
+            - Ref: VPCPrivateSubnet1Subnet8BCA10E0
+            - Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+    DependsOn:
+      - ServerAgentsLBPublicListenerECSGroup200502D1
+      - ServerAgentsLBPublicListener815883F0
+  ServerAgentsServiceSecurityGroupA28A9253:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: one-click-drone-stack/ServerAgents/Service/SecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId:
+        Ref: VPCB9E5F0B4
+  ServerAgentsServiceSecurityGroupfromoneclickdronestackServerAgentsLBSecurityGroup79C0F90E80D90C0C7D:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - ServerAgentsServiceSecurityGroupA28A9253
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - ServerAgentsLBSecurityGroup8765CD38
+          - GroupId
+      ToPort: 80
+  ServerAgentsServiceTaskCountTarget1E2D9C9E:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity:
+        Ref: ServerMaxCapacity
+      MinCapacity: 1
+      ResourceId:
+        Fn::Join:
+          - ""
+          - - service/
+            - Ref: cluster611F8AFF
+            - /
+            - Fn::GetAtt:
+                - ServerAgentsServiceCF2FAFBF
+                - Name
+      RoleARN:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":iam::"
+            - Ref: AWS::AccountId
+            - :role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+  ServerAgentsServiceTaskCountTargetServerCPUScalingE5E6BCD0:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: oneclickdronestackServerAgentsServiceTaskCountTargetServerCPUScaling60176710
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId:
+        Ref: ServerAgentsServiceTaskCountTarget1E2D9C9E
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        TargetValue: 90
+  CloudfrontWrapperCFDistribution8FE23D18:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          ForwardedValues:
+            Cookies:
+              Forward: all
+            QueryString: true
+          TargetOriginId: origin1
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: true
+        Origins:
+          - CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 5
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 30
+              OriginSSLProtocols:
+                - TLSv1
+                - TLSv1.1
+                - TLSv1.2
+            DomainName:
+              Fn::GetAtt:
+                - ServerAgentsLB2FE852AF
+                - DNSName
+            Id: origin1
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+  RunnerAgentsLB09483A10:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      SecurityGroups:
+        - Fn::GetAtt:
+            - RunnerAgentsLBSecurityGroup40A1BD2E
+            - GroupId
+      Subnets:
+        - Ref: VPCPrivateSubnet1Subnet8BCA10E0
+        - Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+      Type: application
+  RunnerAgentsLBSecurityGroup40A1BD2E:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Automatically created Security Group for ELB oneclickdronestackRunnerAgentsLBCC3C5AFF
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId:
+        Ref: VPCB9E5F0B4
+  RunnerAgentsLBSecurityGrouptooneclickdronestackclusterDefaultAutoScalingGroupInstanceSecurityGroup1CEF5E0B3276865535CDC147E3:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - RunnerAgentsLBSecurityGroup40A1BD2E
+          - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - clusterDefaultAutoScalingGroupInstanceSecurityGroup02B5B205
+          - GroupId
+      FromPort: 32768
+      ToPort: 65535
+  RunnerAgentsLBPublicListenerEFEDBFFB:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn:
+            Ref: RunnerAgentsLBPublicListenerECSGroup070DC782
+          Type: forward
+      LoadBalancerArn:
+        Ref: RunnerAgentsLB09483A10
+      Port: 80
+      Protocol: HTTP
+  RunnerAgentsLBPublicListenerECSGroup070DC782:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      VpcId:
+        Ref: VPCB9E5F0B4
+  RunnerAgentsTaskDefTaskRoleA578514F:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  RunnerAgentsTaskDef0DA62EDD:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Environment:
+            - Name: DRONE_DEBUG
+              Value: "true"
+            - Name: DRONE_TRACE
+              Value: "true"
+            - Name: DRONE_RUNNER_CAPACITY
+              Value:
+                Ref: RunnerJobCapacity
+            - Name: DRONE_RPC_HOST
+              Value:
+                Fn::GetAtt:
+                  - ServerAgentsLB2FE852AF
+                  - DNSName
+            - Name: DRONE_RPC_PROTO
+              Value: http
+            - Name: DRONE_RPC_SECRET
+              Value:
+                Ref: ServerRpcSecret
+          Essential: true
+          Image:
+            Ref: RunnerContainer
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: RunnerAgentsTaskDefwebLogGroup47EDEF2C
+              awslogs-stream-prefix: RunnerAgents
+              awslogs-region:
+                Ref: AWS::Region
+          MemoryReservation: 512
+          MountPoints:
+            - ContainerPath: /var/run/docker.sock
+              ReadOnly: false
+              SourceVolume: docker-sock
+          Name: web
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 0
+              Protocol: tcp
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - RunnerAgentsTaskDefExecutionRoleB1DD9F13
+          - Arn
+      Family: oneclickdronestackRunnerAgentsTaskDefD1FEF466
+      NetworkMode: bridge
+      RequiresCompatibilities:
+        - EC2
+      TaskRoleArn:
+        Fn::GetAtt:
+          - RunnerAgentsTaskDefTaskRoleA578514F
+          - Arn
+      Volumes:
+        - Host:
+            SourcePath: /var/run/docker.sock
+          Name: docker-sock
+  RunnerAgentsTaskDefwebLogGroup47EDEF2C:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  RunnerAgentsTaskDefExecutionRoleB1DD9F13:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  RunnerAgentsTaskDefExecutionRoleDefaultPolicy1522860C:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - RunnerAgentsTaskDefwebLogGroup47EDEF2C
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: RunnerAgentsTaskDefExecutionRoleDefaultPolicy1522860C
+      Roles:
+        - Ref: RunnerAgentsTaskDefExecutionRoleB1DD9F13
+  RunnerAgentsServiceECEBD35E:
+    Type: AWS::ECS::Service
+    Properties:
+      TaskDefinition:
+        Ref: RunnerAgentsTaskDef0DA62EDD
+      Cluster:
+        Ref: cluster611F8AFF
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 1
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: EC2
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: 80
+          TargetGroupArn:
+            Ref: RunnerAgentsLBPublicListenerECSGroup070DC782
+      SchedulingStrategy: REPLICA
+    DependsOn:
+      - RunnerAgentsLBPublicListenerECSGroup070DC782
+      - RunnerAgentsLBPublicListenerEFEDBFFB
+  RunnerAgentsServiceTaskCountTargetE11FCEB7:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity:
+        Ref: RunnerMaxCapacity
+      MinCapacity: 1
+      ResourceId:
+        Fn::Join:
+          - ""
+          - - service/
+            - Ref: cluster611F8AFF
+            - /
+            - Fn::GetAtt:
+                - RunnerAgentsServiceECEBD35E
+                - Name
+      RoleARN:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":iam::"
+            - Ref: AWS::AccountId
+            - :role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+  RunnerAgentsServiceTaskCountTargetRunnerCPUScaling4F582506:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: oneclickdronestackRunnerAgentsServiceTaskCountTargetRunnerCPUScalingEEE2FD23
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId:
+        Ref: RunnerAgentsServiceTaskCountTargetE11FCEB7
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        TargetValue: 90
+  EFSCacheVolume:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_14_DAYS
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+  EFSSecurityGroupE0A75964:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: one-click-drone-stack/EFSSecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: from 0.0.0.0/0:2049
+          FromPort: 2049
+          IpProtocol: tcp
+          ToPort: 2049
+        - CidrIpv6: ::0/0
+          Description: from ::0/0:2049
+          FromPort: 2049
+          IpProtocol: tcp
+          ToPort: 2049
+      VpcId:
+        Ref: VPCB9E5F0B4
+  EFSMountTarget0:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSCacheVolume
+      SecurityGroups:
+        - Fn::GetAtt:
+            - EFSSecurityGroupE0A75964
+            - GroupId
+      SubnetId:
+        Ref: VPCPrivateSubnet1Subnet8BCA10E0
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSCacheVolume
+      SecurityGroups:
+        - Fn::GetAtt:
+            - EFSSecurityGroupE0A75964
+            - GroupId
+      SubnetId:
+        Ref: VPCPrivateSubnet2SubnetCFCDAA7A
+  CleanerAgentScheduledEventRule112A3335:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression:
+        Fn::Sub:
+          - rate(${rate})
+          - rate:
+              Ref: CacheCleanerRate
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - cluster611F8AFF
+              - Arn
+          EcsParameters:
+            TaskCount: 1
+            TaskDefinitionArn:
+              Ref: CleanerAgentScheduledTaskDef22F8F177
+          Id: Target0
+          Input: "{}"
+          RoleArn:
+            Fn::GetAtt:
+              - CleanerAgentScheduledTaskDefEventsRole01EC4C8A
+              - Arn
+  CleanerAgentScheduledTaskDefTaskRoleDE0F8917:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  CleanerAgentScheduledTaskDef22F8F177:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Command:
+            - sh
+            - -c
+            - Fn::Sub:
+                - find /cache -mtime +${expiry} -exec rm -f {} \;
+                - expiry:
+                    Ref: CacheExpireAfter
+          Essential: true
+          Image: alpine
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: CleanerAgentScheduledTaskDefScheduledContainerLogGroupF6D3FF4C
+              awslogs-stream-prefix: CleanerAgent
+              awslogs-region:
+                Ref: AWS::Region
+          MemoryReservation: 512
+          MountPoints:
+            - ContainerPath: /cache
+              ReadOnly: false
+              SourceVolume: efs-cache
+          Name: ScheduledContainer
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - CleanerAgentScheduledTaskDefExecutionRole56A5DF37
+          - Arn
+      Family: oneclickdronestackCleanerAgentScheduledTaskDef1B636098
+      NetworkMode: bridge
+      RequiresCompatibilities:
+        - EC2
+      TaskRoleArn:
+        Fn::GetAtt:
+          - CleanerAgentScheduledTaskDefTaskRoleDE0F8917
+          - Arn
+      Volumes:
+        - Host:
+            SourcePath: /mnt/efs
+          Name: efs-cache
+  CleanerAgentScheduledTaskDefScheduledContainerLogGroupF6D3FF4C:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  CleanerAgentScheduledTaskDefExecutionRole56A5DF37:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  CleanerAgentScheduledTaskDefExecutionRoleDefaultPolicy5AA6DC9C:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - CleanerAgentScheduledTaskDefScheduledContainerLogGroupF6D3FF4C
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: CleanerAgentScheduledTaskDefExecutionRoleDefaultPolicy5AA6DC9C
+      Roles:
+        - Ref: CleanerAgentScheduledTaskDefExecutionRole56A5DF37
+  CleanerAgentScheduledTaskDefEventsRole01EC4C8A:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+        Version: "2012-10-17"
+  CleanerAgentScheduledTaskDefEventsRoleDefaultPolicyD4E3302F:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: ecs:RunTask
+            Condition:
+              ArnEquals:
+                ecs:cluster:
+                  Fn::GetAtt:
+                    - cluster611F8AFF
+                    - Arn
+            Effect: Allow
+            Resource:
+              Ref: CleanerAgentScheduledTaskDef22F8F177
+          - Action: iam:PassRole
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - CleanerAgentScheduledTaskDefExecutionRole56A5DF37
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: CleanerAgentScheduledTaskDefEventsRoleDefaultPolicyD4E3302F
+      Roles:
+        - Ref: CleanerAgentScheduledTaskDefEventsRole01EC4C8A
+Outputs:
+  DroneHost:
+    Value:
+      Fn::GetAtt:
+        - CloudfrontWrapperCFDistribution8FE23D18
+        - DomainName
+  DroneHomepage:
+    Value:
+      Fn::Sub:
+        - https://${host}
+        - host:
+            Fn::GetAtt:
+              - CloudfrontWrapperCFDistribution8FE23D18
+              - DomainName
+  OAuthCallback:
+    Value:
+      Fn::Sub:
+        - https://${host}/login
+        - host:
+            Fn::GetAtt:
+              - CloudfrontWrapperCFDistribution8FE23D18
+              - DomainName
+
