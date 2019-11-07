@@ -30,9 +30,12 @@ npm run deploy
 - [x] ~~Rework the CDK script to have all the names following cfn conventions (CamelCased)~~
 - [x] ~~Use Drone's capability to upload logs into a private S3 bucket instead of the database~~
 - [x] ~~Add an ECS task that cleans up the EFS cache once in a while to reduce costs~~
-- [ ] Use Drone's internal health check (/healthz) in task definitions
+- [x] ~~Use Drone's internal health check (/healthz) in task definitions~~
+- [ ] Revamp and review security and put Drone behind a private API Gateway integration
+- [ ] Configure dependabot to submit PRs when Drone agent and server images update
 - [ ] Document how different parameters are configured
+- [ ] Filter out CDK metadata constructs and generate a one-click deployable CFN yaml
 - [ ] Write CDK unit tests for all the resources deployed
-- [ ] Isolate the server fleet from public and integrate with API Gateway via VPC links
+- [ ] Write integration tests and R&D how we can do continuos integration testing with CDK
 - [ ] Put Github OAuth and other sensitive parameters in SSM and read it from SSM for security
-- [ ] Automate custom domain creation in the wrapper API Gateway / CloudFront
+- [ ] Automate custom domain creation in the wrapper CloudFront distribution
