@@ -37,7 +37,7 @@ steps:
     commands:
       - npm run dist
 
-  - name: push dist
+  - name: push dist git
     image: alpine/git
     environment:
       GIT_USER:
@@ -49,6 +49,20 @@ steps:
       - git diff --staged --quiet || git commit -m "[skip ci] [dist push] updated raw CloudFormation file"
       - git remote add deploy "https://$GIT_USER:$GIT_PASS@github.com/$DRONE_REPO_OWNER/$DRONE_REPO_NAME.git"
       - git push deploy master
+    when:
+      event: [push]
+      branch: [master]
+
+  - name: push dist s3
+    image: sepehrl/one-click-drone
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_deploy_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_deploy_secret
+    commands:
+      - aws s3 cp dist/ocd.yml s3://one-click-drone
+      - aws s3api put-object-acl --bucket one-click-drone --key ocd.yml --acl public-read
     when:
       event: [push]
       branch: [master]
