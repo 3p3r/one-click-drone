@@ -63,3 +63,6 @@ typings/
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Drone CI cache key
+.cache_key
