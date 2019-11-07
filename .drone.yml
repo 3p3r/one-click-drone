@@ -1,21 +1,51 @@
 ---
 kind: pipeline
 type: docker
-name: default
+name: one-click-drone
 
 steps:
-  - name: test
-    image: node:alpine
+  - name: cache key
+    image: alpine
+    commands:
+      - touch .cache_key
+      - echo -n $(md5sum package-lock.json)               >> .cache_key
+      - echo -n $(cat .cache_key | md5sum | cut -c 1-32)  >  .cache_key
+
+  - name: restore cache
+    image: drillster/drone-volume-cache
     volumes:
       - name: cache
         path: /cache
+    settings:
+      restore: true
+      mount:
+        - node_modules
+
+  - name: npm install
+    image: node:alpine
     commands:
-      - ls -la /cache
-      - echo works > /cache/index
-      - echo $(date +%s) > /cache/index
-      - cat /cache/index
-      - npm install
-      - npm run synth
+      - npm install --allow-root --unsafe-perm
+
+  - name: npm install integrity
+    image: alpine/git
+    commands:
+      - git diff --exit-code package-lock.json
+      - git diff --exit-code package.json
+
+  - name: npm run dist
+    image: node:alpine
+    commands:
+      - npm run dist
+
+  - name: rebuild cache
+    image: drillster/drone-volume-cache
+    volumes:
+      - name: cache
+        path: /cache
+    settings:
+      rebuild: true
+      mount:
+        - node_modules
 
 volumes:
   - name: cache
