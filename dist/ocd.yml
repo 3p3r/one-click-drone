@@ -1130,18 +1130,6 @@ Resources:
         PriceClass: PriceClass_100
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
-  RunnerAgentsLB09483A10:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Scheme: internal
-      SecurityGroups:
-        - Fn::GetAtt:
-            - RunnerAgentsLBSecurityGroup40A1BD2E
-            - GroupId
-      Subnets:
-        - Ref: VPCPrivateSubnet1Subnet8BCA10E0
-        - Ref: VPCPrivateSubnet2SubnetCFCDAA7A
-      Type: application
   RunnerAgentsLBSecurityGroup40A1BD2E:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -1169,25 +1157,6 @@ Resources:
           - GroupId
       FromPort: 32768
       ToPort: 65535
-  RunnerAgentsLBPublicListenerEFEDBFFB:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - TargetGroupArn:
-            Ref: RunnerAgentsLBPublicListenerECSGroup070DC782
-          Type: forward
-      LoadBalancerArn:
-        Ref: RunnerAgentsLB09483A10
-      Port: 80
-      Protocol: HTTP
-  RunnerAgentsLBPublicListenerECSGroup070DC782:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Port: 80
-      Protocol: HTTP
-      TargetType: instance
-      VpcId:
-        Ref: VPCB9E5F0B4
   RunnerAgentsTaskDefTaskRoleA578514F:
     Type: AWS::IAM::Role
     Properties:
@@ -1300,17 +1269,8 @@ Resources:
         MinimumHealthyPercent: 50
       DesiredCount: 1
       EnableECSManagedTags: false
-      HealthCheckGracePeriodSeconds: 60
       LaunchType: EC2
-      LoadBalancers:
-        - ContainerName: web
-          ContainerPort: 80
-          TargetGroupArn:
-            Ref: RunnerAgentsLBPublicListenerECSGroup070DC782
       SchedulingStrategy: REPLICA
-    DependsOn:
-      - RunnerAgentsLBPublicListenerECSGroup070DC782
-      - RunnerAgentsLBPublicListenerEFEDBFFB
   RunnerAgentsServiceTaskCountTargetE11FCEB7:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
