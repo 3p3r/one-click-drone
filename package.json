@@ -7,7 +7,7 @@
   },
   "scripts": {
     "diff": "cdk --strict --verbose diff",
-    "dist": "bash -c 'unset \"${!ocd_@}\" && npx npm-run-all dist:prep dist:save'",
+    "dist": "sh -c 'unset $(env | grep -o \"^ocd_[^=]*\") && npx npm-run-all dist:prep dist:save'",
     "dist:prep": "mkdir -p dist",
     "dist:save": "cdk synth --strict --verbose --json=false --version-reporting=false --path-metadata=false --asset-metadata=false > dist/ocd.yml",
     "synth": "cdk --strict --verbose synth",
