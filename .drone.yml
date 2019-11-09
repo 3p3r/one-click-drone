@@ -48,10 +48,7 @@ steps:
       - git add dist/ocd.yml
       - git diff --staged --quiet || git commit -m "[skip ci] [dist push] updated raw CloudFormation file"
       - git remote add deploy "https://$GIT_USER:$GIT_PASS@github.com/$DRONE_REPO_OWNER/$DRONE_REPO_NAME.git"
-      - git push deploy master
-    when:
-      event: [push]
-      branch: [master]
+      - git push deploy ${DRONE_COMMIT_BRANCH}
 
   - name: push dist s3
     image: sepehrl/one-click-drone
@@ -64,8 +61,8 @@ steps:
       - aws s3 cp dist/ocd.yml s3://one-click-drone
       - aws s3api put-object-acl --bucket one-click-drone --key ocd.yml --acl public-read
     when:
-      event: [push]
-      branch: [master]
+      branch:
+        - master
 
   - name: rebuild cache
     image: drillster/drone-volume-cache
