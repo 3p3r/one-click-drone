@@ -72,6 +72,10 @@ steps:
     volumes:
       - name: cache
         path: /cache
+    when:
+      status:
+        - success
+        - failure
     settings:
       rebuild: true
       mount:
