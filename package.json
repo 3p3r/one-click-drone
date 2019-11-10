@@ -30,7 +30,7 @@
     "eslint-config-prettier": "^6.5.0",
     "eslint-plugin-prettier": "^3.1.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "^1.19.0"
+    "prettier": "^1.19.1"
   },
   "dependencies": {
     "@aws-cdk/assert": "^1.15.0",
