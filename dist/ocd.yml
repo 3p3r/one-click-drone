@@ -25,7 +25,7 @@ Parameters:
     NoEcho: true
   RunnerContainer:
     Type: String
-    Default: drone/drone-runner-docker:latest
+    Default: drone/drone-runner-docker:1
     Description: Drone docker runner container name and version used
   RunnerMaxCapacity:
     Type: Number
@@ -39,7 +39,7 @@ Parameters:
     MinValue: 2
   ServerContainer:
     Type: String
-    Default: drone/drone:latest
+    Default: drone/drone:1
     Description: Drone server container name and version used
   ServerRpcSecret:
     Type: String
