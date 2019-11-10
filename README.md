@@ -1,6 +1,6 @@
 # one-click-drone
 
-[![Build Status](https://ci.rootstreamapp.com/api/badges/3p3r/one-click-drone/status.svg)](https://ci.rootstreamapp.com/3p3r/one-click-drone)
+[![Build Status](https://ci.rootstreamapp.com/api/badges/3p3r/one-click-drone/status.svg?ref=refs/heads/master)](https://ci.rootstreamapp.com/3p3r/one-click-drone)
 
 **Launch in your AWS account:**<br /><a target="_blank" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?templateURL=https%3A%2F%2Fone-click-drone.s3-us-west-2.amazonaws.com%2Focd.yml"><span><img height="24px" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"/></span></a>
 
