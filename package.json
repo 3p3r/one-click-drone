@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/3p3r/one-click-drone#readme",
   "devDependencies": {
-    "aws-cdk": "^1.16.0",
+    "aws-cdk": "^1.16.2",
     "eslint": "^6.6.0",
     "eslint-config-prettier": "^6.5.0",
     "eslint-plugin-prettier": "^3.1.1",
@@ -33,7 +33,7 @@
     "prettier": "^1.19.1"
   },
   "dependencies": {
-    "@aws-cdk/assert": "^1.15.0",
+    "@aws-cdk/assert": "^1.16.2",
     "@aws-cdk/aws-applicationautoscaling": "^1.15.0",
     "@aws-cdk/aws-autoscaling": "^1.15.0",
     "@aws-cdk/aws-cloudfront": "^1.16.2",
@@ -41,7 +41,7 @@
     "@aws-cdk/aws-ecs": "^1.15.0",
     "@aws-cdk/aws-ecs-patterns": "^1.15.0",
     "@aws-cdk/aws-efs": "^1.16.2",
-    "@aws-cdk/aws-iam": "^1.15.0",
+    "@aws-cdk/aws-iam": "^1.16.2",
     "@aws-cdk/aws-rds": "^1.15.0",
     "@aws-cdk/aws-s3": "^1.15.0",
     "@aws-cdk/core": "^1.16.2",
