@@ -1453,12 +1453,20 @@ Resources:
       PolicyName: EFSCacheCleanerAgentScheduledTaskDefEventsRoleDefaultPolicy08BFC885
       Roles:
         - Ref: EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103
-Conditions:
-  DronerServerDomainCondition95D255D4:
-    Fn::Equals:
-      - Ref: ServerDomain
-      - ""
 Outputs:
+  DronerServerServerAgentsLoadBalancerDNS25381BF4:
+    Value:
+      Fn::GetAtt:
+        - DronerServerServerAgentsLB5F8B5750
+        - DNSName
+  DronerServerServerAgentsServiceURL64EA8F34:
+    Value:
+      Fn::Join:
+        - ""
+        - - http://
+          - Fn::GetAtt:
+              - DronerServerServerAgentsLB5F8B5750
+              - DNSName
   DroneHomepage:
     Description: 'This is the homepage of your Drone CI deployment. You should set this in your Github OAuth apps page: https://github.com/settings/developers. If you specified a custom domain for Drone, you must manually provision a certificate for it in the "us-east-1" (N. Virginia) region and follow https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-procedures.html to associate it with your CloudFront distribution.'
     Value:
@@ -1489,4 +1497,9 @@ Outputs:
       Fn::GetAtt:
         - DronerServerCloudfrontWrapperCFDistributionF3E827DA
         - DomainName
+Conditions:
+  DronerServerDomainCondition95D255D4:
+    Fn::Equals:
+      - Ref: ServerDomain
+      - ""
 
