@@ -22,6 +22,7 @@ time to properly set up a CI installation for their projects. Either that, or no
 :heavy_check_mark: Runner build logs storage on **S3** to save on database costs and better logs accessibility<br />
 :heavy_check_mark: Runner and Server agent logs storage on **CloudWatch** for diagnosis and debugging<br />
 :heavy_check_mark: Cache cleaner **ECS task** script to keep EFS usage and costs at minimum<br />
+:heavy_check_mark: Support for **custom AMIs** running Drone Docker Runners<br />
 
 ## usage
 
