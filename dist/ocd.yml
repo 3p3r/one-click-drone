@@ -37,6 +37,10 @@ Parameters:
     Default: 5
     Description: Drone docker runner service auto-scaler limit.
     MinValue: 2
+  RunnerAMI:
+    Type: String
+    Default: ""
+    Description: EC2 instance AMI of Drone Docker Runner agents.
   ServerContainer:
     Type: String
     Default: drone/drone:1
@@ -391,7 +395,10 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       ImageId:
-        Ref: SsmParameterValueawsserviceecsoptimizedamiamazonlinux2recommendedimageidC96584B6F00A464EAD1953AFF4B05118Parameter
+        Fn::If:
+          - NetworkingImageConditionA21F73E4
+          - Ref: SsmParameterValueawsserviceecsoptimizedamiamazonlinux2recommendedimageidC96584B6F00A464EAD1953AFF4B05118Parameter
+          - Ref: RunnerAMI
       InstanceType:
         Ref: RunnerInstanceType
       IamInstanceProfile:
@@ -1453,6 +1460,15 @@ Resources:
       PolicyName: EFSCacheCleanerAgentScheduledTaskDefEventsRoleDefaultPolicy08BFC885
       Roles:
         - Ref: EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103
+Conditions:
+  NetworkingImageConditionA21F73E4:
+    Fn::Equals:
+      - Ref: RunnerAMI
+      - ""
+  DronerServerDomainCondition95D255D4:
+    Fn::Equals:
+      - Ref: ServerDomain
+      - ""
 Outputs:
   DronerServerServerAgentsLoadBalancerDNS25381BF4:
     Value:
@@ -1497,9 +1513,4 @@ Outputs:
       Fn::GetAtt:
         - DronerServerCloudfrontWrapperCFDistributionF3E827DA
         - DomainName
-Conditions:
-  DronerServerDomainCondition95D255D4:
-    Fn::Equals:
-      - Ref: ServerDomain
-      - ""
 
