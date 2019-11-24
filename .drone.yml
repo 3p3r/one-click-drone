@@ -7,9 +7,7 @@ steps:
   - name: cache key
     image: alpine
     commands:
-      - touch .cache_key
-      - echo -n $(md5sum package-lock.json)               >> .cache_key
-      - echo -n $(cat .cache_key | md5sum | cut -c 1-32)  >  .cache_key
+      - echo -n $(md5sum package-lock.json) > .cache_key
 
   - name: restore cache
     image: drillster/drone-volume-cache
