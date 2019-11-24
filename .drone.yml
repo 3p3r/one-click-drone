@@ -7,9 +7,7 @@ steps:
   - name: cache key
     image: alpine
     commands:
-      - touch .cache_key
-      - echo -n $(md5sum package-lock.json)               >> .cache_key
-      - echo -n $(cat .cache_key | md5sum | cut -c 1-32)  >  .cache_key
+      - echo -n $(md5sum package-lock.json) > .cache_key
 
   - name: restore cache
     image: drillster/drone-volume-cache
@@ -49,6 +47,9 @@ steps:
       - git diff --staged --quiet || git commit -m "[skip ci] [dist push] updated raw CloudFormation file"
       - git remote add deploy "https://$GIT_USER:$GIT_PASS@github.com/$DRONE_REPO_OWNER/$DRONE_REPO_NAME.git"
       - git push deploy ${DRONE_COMMIT_BRANCH}
+    when:
+      event:
+        - push
 
   - name: push dist s3
     image: sepehrl/one-click-drone
@@ -63,6 +64,8 @@ steps:
     when:
       branch:
         - master
+      event:
+        - push
 
   - name: rebuild cache
     image: drillster/drone-volume-cache
