@@ -2,12 +2,12 @@ Description: "one click deploy of Drone CI into your AWS account with Fargate, R
 Parameters:
   DatabaseUsername:
     Type: String
-    Default: ""
+    Default: DroneDBUser
     Description: Database username used by Drone server agents.
     MinLength: 10
   DatabasePassword:
     Type: String
-    Default: ""
+    Default: DroneDBPass
     Description: Database password used by Drone server agents.
     MinLength: 10
     NoEcho: true
@@ -70,7 +70,7 @@ Parameters:
     NoEcho: true
   ServerAdmin:
     Type: String
-    Default: ""
+    Default: octocat
     ConstraintDescription: Without this, you will not have an admin user and cannot make trusted builds.
     Description: Drone server admin user (created only during the initial deploy - DRONE_USER_CREATE).
     MinLength: 2
@@ -84,14 +84,14 @@ Parameters:
     Description: Github server used. Change this if using Github enterprise.
   GithubClientId:
     Type: String
-    Default: ""
+    Default: get this from https://github.com/settings/apps !
     ConstraintDescription: "You can obtain this here: https://github.com/settings/apps."
     Description: Github app OAuth clientId (DRONE_GITHUB_CLIENT_ID).
     MinLength: 2
     NoEcho: true
   GithubClientSecret:
     Type: String
-    Default: ""
+    Default: get this from https://github.com/settings/apps !
     ConstraintDescription: "You can obtain this here: https://github.com/settings/apps."
     Description: Github app OAuth clientSecret (DRONE_GITHUB_CLIENT_SECRET).
     MinLength: 2
