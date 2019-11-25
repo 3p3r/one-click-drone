@@ -36,7 +36,7 @@
     "@aws-cdk/assert": "^1.17.1",
     "@aws-cdk/aws-applicationautoscaling": "^1.15.0",
     "@aws-cdk/aws-autoscaling": "^1.15.0",
-    "@aws-cdk/aws-cloudfront": "^1.17.1",
+    "@aws-cdk/aws-cloudfront": "^1.18.0",
     "@aws-cdk/aws-ec2": "^1.17.1",
     "@aws-cdk/aws-ecs": "^1.15.0",
     "@aws-cdk/aws-ecs-patterns": "^1.15.0",
