@@ -41,6 +41,10 @@ Parameters:
     Type: String
     Default: ""
     Description: EC2 instance AMI of Drone Docker Runner agents.
+  RunnerSSHKey:
+    Type: String
+    Default: ""
+    Description: SSH key used for EC2 instance AMIs of Drone Docker Runner agents (if empty, SSH is not possible).
   ServerContainer:
     Type: String
     Default: drone/drone:1
@@ -102,7 +106,7 @@ Parameters:
     Description: The rate at which the cache cleaner runs (CloudWatch rate expression).
   CacheTTLInDays:
     Type: Number
-    Default: 7
+    Default: 30
     Description: Cache files older than this number of days are deleted at "CacheCleanerRate" intervals
     MinValue: 1
   SsmParameterValueawsserviceecsoptimizedamiamazonlinux2recommendedimageidC96584B6F00A464EAD1953AFF4B05118Parameter:
@@ -401,8 +405,14 @@ Resources:
           - Ref: RunnerAMI
       InstanceType:
         Ref: RunnerInstanceType
+      AssociatePublicIpAddress: true
       IamInstanceProfile:
         Ref: NetworkingClusterDefaultAutoScalingGroupInstanceProfile8F754F00
+      KeyName:
+        Fn::If:
+          - NetworkingKeyConditionADFBB1B1
+          - AWS::NoValue
+          - Ref: RunnerSSHKey
       SecurityGroups:
         - Fn::GetAtt:
             - NetworkingClusterDefaultAutoScalingGroupInstanceSecurityGroupC82E7C30
@@ -452,8 +462,8 @@ Resources:
           PropagateAtLaunch: true
           Value: one-click-drone-stack/Networking/Cluster/DefaultAutoScalingGroup
       VPCZoneIdentifier:
-        - Ref: NetworkingVPCPrivateSubnet1SubnetA4560E1F
-        - Ref: NetworkingVPCPrivateSubnet2Subnet388EEB72
+        - Ref: NetworkingVPCPublicSubnet1Subnet456768EF
+        - Ref: NetworkingVPCPublicSubnet2Subnet06EE199A
     UpdatePolicy:
       AutoScalingReplacingUpdate:
         WillReplace: true
@@ -1461,6 +1471,10 @@ Resources:
       Roles:
         - Ref: EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103
 Conditions:
+  NetworkingKeyConditionADFBB1B1:
+    Fn::Equals:
+      - Ref: RunnerSSHKey
+      - ""
   NetworkingImageConditionA21F73E4:
     Fn::Equals:
       - Ref: RunnerAMI
