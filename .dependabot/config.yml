@@ -4,7 +4,7 @@ update_configs:
     directory: '/'
     update_schedule: 'live'
     target_branch: 'develop'
-  - package_manager: 'docker'
-    directory: '/'
-    update_schedule: 'daily'
-    target_branch: 'develop'
+    commit_message:
+      # don't use cache when building dependabot PRs
+      prefix: '[NO CACHE] chore'
+      include_scope: true
