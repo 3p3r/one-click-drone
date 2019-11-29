@@ -5,6 +5,5 @@ update_configs:
     update_schedule: 'live'
     target_branch: 'develop'
     commit_message:
-      # don't use cache when building dependabot PRs
-      prefix: '[NO CACHE] chore'
+      prefix: '[NO CACHE]'
       include_scope: true
