@@ -45,7 +45,7 @@
     "@aws-cdk/aws-rds": "^1.15.0",
     "@aws-cdk/aws-s3": "^1.18.0",
     "@aws-cdk/core": "^1.16.2",
-    "@rootstream/rc-typed": "^1.0.0",
+    "@rootstream/rc-typed": "^1.0.1",
     "debug": "^4.1.1",
     "lodash": "^4.17.15"
   },
