@@ -433,6 +433,15 @@ Resources:
                 sudo service iptables save
 
                 echo ECS_AWSVPC_BLOCK_IMDS=true >> /etc/ecs/ecs.config
+
+                yum update -y,yum install -y amazon-efs-utils,mkdir -p /mnt/efs,
+              - Fn::Sub:
+                  - mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${efsId}.efs.${region}.amazonaws.com:/ /mnt/efs
+                  - region:
+                      Ref: AWS::Region
+                    efsId:
+                      Ref: EFSCacheEFSCacheVolumeBA7EA186
+              - ",chmod 777 /mnt/efs,mount -a"
     DependsOn:
       - NetworkingClusterDefaultAutoScalingGroupInstanceRoleDefaultPolicyCD594131
       - NetworkingClusterDefaultAutoScalingGroupInstanceRoleFB9BA3B9
@@ -1268,6 +1277,199 @@ Resources:
       EnableECSManagedTags: false
       LaunchType: EC2
       SchedulingStrategy: DAEMON
+  EFSCacheEFSCacheVolumeBA7EA186:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_14_DAYS
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+  EFSCacheEFSSecurityGroupDE059E67:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: one-click-drone-stack/EFSCache/EFSSecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: from 0.0.0.0/0:2049
+          FromPort: 2049
+          IpProtocol: tcp
+          ToPort: 2049
+        - CidrIpv6: ::0/0
+          Description: from ::0/0:2049
+          FromPort: 2049
+          IpProtocol: tcp
+          ToPort: 2049
+      VpcId:
+        Ref: NetworkingVPC47331CE2
+  EFSCacheEFSMountTarget0C744345F:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSCacheEFSCacheVolumeBA7EA186
+      SecurityGroups:
+        - Fn::GetAtt:
+            - EFSCacheEFSSecurityGroupDE059E67
+            - GroupId
+      SubnetId:
+        Ref: NetworkingVPCPrivateSubnet1SubnetA4560E1F
+  EFSCacheEFSMountTarget1CE75F7C4:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSCacheEFSCacheVolumeBA7EA186
+      SecurityGroups:
+        - Fn::GetAtt:
+            - EFSCacheEFSSecurityGroupDE059E67
+            - GroupId
+      SubnetId:
+        Ref: NetworkingVPCPrivateSubnet2Subnet388EEB72
+  EFSCacheCleanerAgentScheduledEventRule5C14EF62:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression:
+        Fn::Sub:
+          - rate(${rate})
+          - rate:
+              Ref: CacheCleanerRate
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - NetworkingClusterCBCE51DB
+              - Arn
+          EcsParameters:
+            TaskCount: 1
+            TaskDefinitionArn:
+              Ref: EFSCacheCleanerAgentScheduledTaskDef65E805F0
+          Id: Target0
+          Input: "{}"
+          RoleArn:
+            Fn::GetAtt:
+              - EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103
+              - Arn
+  EFSCacheCleanerAgentScheduledTaskDefTaskRoleAD005434:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  EFSCacheCleanerAgentScheduledTaskDef65E805F0:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Command:
+            - sh
+            - -c
+            - Fn::Sub:
+                - find /cache -mtime +${expiry} -exec rm -f {} \;
+                - expiry:
+                    Ref: CacheTTLInDays
+          Essential: true
+          Image: alpine
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Ref: EFSCacheCleanerAgentScheduledTaskDefScheduledContainerLogGroup7415FD09
+              awslogs-stream-prefix: CleanerAgent
+              awslogs-region:
+                Ref: AWS::Region
+          MemoryReservation: 512
+          MountPoints:
+            - ContainerPath: /cache
+              ReadOnly: false
+              SourceVolume: efs-cache
+          Name: ScheduledContainer
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDE2D8946
+          - Arn
+      Family: oneclickdronestackEFSCacheCleanerAgentScheduledTaskDef18498356
+      NetworkMode: bridge
+      RequiresCompatibilities:
+        - EC2
+      TaskRoleArn:
+        Fn::GetAtt:
+          - EFSCacheCleanerAgentScheduledTaskDefTaskRoleAD005434
+          - Arn
+      Volumes:
+        - Host:
+            SourcePath: /mnt/efs
+          Name: efs-cache
+  EFSCacheCleanerAgentScheduledTaskDefScheduledContainerLogGroup7415FD09:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDE2D8946:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: "2012-10-17"
+  EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDefaultPolicyC54DB86E:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - EFSCacheCleanerAgentScheduledTaskDefScheduledContainerLogGroup7415FD09
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDefaultPolicyC54DB86E
+      Roles:
+        - Ref: EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDE2D8946
+  EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+        Version: "2012-10-17"
+  EFSCacheCleanerAgentScheduledTaskDefEventsRoleDefaultPolicy08BFC885:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: ecs:RunTask
+            Condition:
+              ArnEquals:
+                ecs:cluster:
+                  Fn::GetAtt:
+                    - NetworkingClusterCBCE51DB
+                    - Arn
+            Effect: Allow
+            Resource:
+              Ref: EFSCacheCleanerAgentScheduledTaskDef65E805F0
+          - Action: iam:PassRole
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - EFSCacheCleanerAgentScheduledTaskDefExecutionRoleDE2D8946
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: EFSCacheCleanerAgentScheduledTaskDefEventsRoleDefaultPolicy08BFC885
+      Roles:
+        - Ref: EFSCacheCleanerAgentScheduledTaskDefEventsRoleA60A5103
 Conditions:
   NetworkingKeyConditionADFBB1B1:
     Fn::Equals:
