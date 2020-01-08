@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/3p3r/one-click-drone#readme",
   "devDependencies": {
-    "aws-cdk": "^1.18.0",
+    "aws-cdk": "^1.20.0",
     "eslint": "^6.7.2",
     "eslint-config-prettier": "^6.7.0",
     "eslint-plugin-prettier": "^3.1.2",
